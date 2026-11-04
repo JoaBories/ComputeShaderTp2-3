@@ -1,14 +1,102 @@
 #version 430 core
+
 layout(local_size_x = 256) in;
 struct Particle { vec4 posType; vec4 vel; };
+
 layout(std430, binding = 0) readonly buffer Current { Particle current[]; };
-layout(std430, binding = 1) writeonly buffer Next { Particle next[]; };
+
+layout(std430, binding = 4) buffer Heads { int cellHead[]; };       // une entree par cellule 
+layout(std430, binding = 5) buffer Chained { int nextParticle[]; }; // une entree par boid
+
+layout(std430, binding = 6) writeonly buffer Forces { vec4 forces[]; };
+
 uniform uint N;
 uniform float boxSize;
+uniform float cellSize;
+uniform int nC;
+uniform int gridSize;
+
+uniform vec3 r;
+
+float aS = 1.6f;
+float aA = 0.8f;
+float aC = 0.4f;
+
+ivec3 getCellPos(vec3 boidPos) { return ivec3(floor(boidPos / cellSize)); }
+uint getCellId(ivec3 c) { return uint(c.x + gridSize*(c.y + gridSize*c.z)); }
 
 void main() {
     uint id = gl_GlobalInvocationID.x;
     if (id >= N) return;
     
-    next[id].vel = current[id].vel;
+    vec3 pos = current[id].posType.xyz;
+    vec3 vel = current[id].vel.xyz;
+    ivec3 c = getCellPos(pos);
+    
+    int xMin = max(0,   c.x - 1);
+    int xMax = min(gridSize-1, c.x + 1);
+    int yMin = max(0,   c.y - 1);
+    int yMax = min(gridSize-1, c.y + 1);
+    int zMin = max(0,   c.z - 1);
+    int zMax = min(gridSize-1, c.z + 1);
+
+    vec3 separSum = vec3(0.0f);
+    vec3 alignSum = vec3(0.0f);
+    vec3 groupSum = vec3(0.0f);
+
+    int separCount = 0;
+    int alignCount = 0;
+    int groupCount = 0;
+    
+    vec3 rSquared = r*r;
+
+    for (int x = xMin; x <= xMax; x++) {
+        for (int y = yMin; y <= yMax; y++) {
+            for (int z = zMin; z <= zMax; z++) {
+                uint cell = getCellId(ivec3(x,y,z));
+                //if (cell > nC-1) continue;
+
+                for (int j = cellHead[cell]; j != -1; j = nextParticle[j]) {
+                    if (j == id) continue;
+
+                    vec3 jpos = current[j].posType.xyz;
+                    vec3 jvel = current[j].vel.xyz;
+
+                    vec3 ij = jpos - pos;
+                    float dSquared = dot(ij, ij);
+
+                    if (dSquared > cellSize*cellSize || dSquared < 1e-6f) continue;
+
+                    if (dSquared < rSquared.x) {
+                        separSum += -ij;
+                        separCount++;
+                    }
+
+                    if (dSquared < rSquared.y) {
+                        alignSum += jvel;
+                        alignCount++;
+                    }
+
+                    if (dSquared < rSquared.z) {
+                        groupSum += jpos;
+                        groupCount++;
+                    }
+                }
+            }
+        }
+    }
+    
+    vec3 force = vec3(0.0f);
+    
+    if (separCount > 0) {
+        force += (separSum/separCount) * aS;
+    }
+    if (alignCount > 0) {
+        force += (alignSum/alignCount - vel) * aA;
+    }
+    if (groupCount > 0) {
+        force += (groupSum/groupCount - pos) * aC;
+    }
+    
+    forces[id] = vec4(force, 0.0f);
 }

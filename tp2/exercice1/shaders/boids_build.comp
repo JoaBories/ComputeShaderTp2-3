@@ -2,36 +2,27 @@
 layout(local_size_x = 256) in;
 struct Particle { vec4 posType; vec4 vel; };
 layout(std430, binding = 0) readonly buffer Current { Particle current[]; };
-layout(std430, binding = 1) writeonly buffer Next { Particle next[]; };
 
 layout(std430, binding = 4) buffer Heads { int cellHead[]; };       // une entree par cellule 
 layout(std430, binding = 5) buffer Chained { int nextParticle[]; }; // une entree par boid
 
 uniform uint N;
 uniform float boxSize;
-uniform float h;
+uniform float cellSize;
 uniform int nC;
+uniform int gridSize;
 
-uint getCellId(vec3 boidPos)
-{
-    vec3 c = boidPos/h;
-    return uint(c.x + nC*(c.y + nC*c.z));
-}
+ivec3 getCellPos(vec3 boidPos) { return ivec3(floor(boidPos / cellSize)); }
+uint getCellId(ivec3 c) { return uint(c.x + gridSize*(c.y + gridSize*c.z)); }
 
 void main() {
     uint id = gl_GlobalInvocationID.x;
     if (id >= N) return;
     
-    if (id < nC) cellHead[id] = -1;
-    nextParticle[id] = -1;
-    
-    barrier();
-    
-    uint cellIndex = getCellId(current[id].posType.xyz);
+    uint cellIndex = getCellId(getCellPos(current[id].posType.xyz));
     if (cellIndex < nC) 
     {
-        int previousId = int(id);
-        atomicExchange(cellHead[cellIndex], previousId);
+        int previousId = atomicExchange(cellHead[cellIndex], int(id));
         nextParticle[id] = previousId;
     }
 }

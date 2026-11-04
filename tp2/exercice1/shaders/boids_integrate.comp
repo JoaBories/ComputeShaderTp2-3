@@ -3,13 +3,37 @@ layout(local_size_x = 256) in;
 struct Particle { vec4 posType; vec4 vel; };
 layout(std430, binding = 0) readonly buffer Current { Particle current[]; };
 layout(std430, binding = 1) writeonly buffer Next { Particle next[]; };
+
+layout(std430, binding = 6) readonly buffer Forces { vec4 forces[]; };
+
 uniform uint N;
 uniform float boxSize;
+uniform float vMax;
+uniform float dt;
+
+void reflectInBox(inout vec3 position, inout vec3 velocity) {
+    vec3 hitMin = vec3(lessThan(position, vec3(0.0)));
+    vec3 hitMax = vec3(greaterThan(position, vec3(boxSize)));
+    position = mix(position, -position, hitMin);
+    position = mix(position, 2.0 * boxSize - position, hitMax);
+    velocity *= 1.0 - 2.0 * max(hitMin, hitMax);
+}
 
 void main() {
     uint id = gl_GlobalInvocationID.x;
     if (id >= N) return;
 
-    next[id].posType = current[id].posType + current[id].vel;
-    next[id].vel = current[id].vel;
+    vec3 pos = current[id].posType.xyz;
+    vec3 vel = current[id].vel.xyz;
+    vec3 force = forces[id].xyz;
+    
+    vec3 newVel = vel + dt * force;
+    if (dot(newVel, newVel) > vMax*vMax) newVel = normalize(newVel)*vMax;
+    
+    vec3 newPos = pos + newVel * dt;
+    
+    reflectInBox(newPos, newVel);
+    
+    next[id].posType = vec4(newPos, 0.0f);
+    next[id].vel = vec4(newVel, 0.0f);
 }
