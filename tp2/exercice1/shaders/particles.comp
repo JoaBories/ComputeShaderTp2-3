@@ -5,8 +5,10 @@ layout(std430, binding = 0) readonly buffer Current { Particle current[]; };
 layout(std430, binding = 1) writeonly buffer Next { Particle next[]; };
 uniform uint N;
 uniform float boxSize;
+
 void main() {
   uint id = gl_GlobalInvocationID.x;
   if (id >= N) return;
+  
   next[id] = current[id];
 }
