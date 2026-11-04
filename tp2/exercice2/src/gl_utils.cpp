@@ -69,17 +69,18 @@ GLuint compile(GLenum type, const std::string& src, const std::string& name) {
   }
   return shader;
 }
-GLuint link(GLuint a, GLuint b) {
+GLuint link(GLuint a, GLuint b, GLuint c) {
   GLuint program = glCreateProgram();
   glAttachShader(program, a);
   if (b) glAttachShader(program, b);
+  if (c) glAttachShader(program, c);
   glLinkProgram(program);
   GLint ok = 0; glGetProgramiv(program, GL_LINK_STATUS, &ok);
   if (!ok) {
     char log[2048]; glGetProgramInfoLog(program, sizeof(log), 0, log);
     throw std::runtime_error(std::string("link : ") + log);
   }
-  glDeleteShader(a); if (b) glDeleteShader(b);
+  glDeleteShader(a); if (b) glDeleteShader(b); if (c) glDeleteShader(c);
   return program;
 }
 std::string shaderPath(const char* path) {
@@ -90,6 +91,7 @@ std::string shaderPath(const char* path) {
 void ensurePoints() {
   if (gPoints) return;
   gPoints = link(compile(GL_VERTEX_SHADER, readFile(shaderPath("points.vert")), "points.vert"),
+                 compile(GL_GEOMETRY_SHADER, readFile(shaderPath("points.geom")), "points.geom"),
                  compile(GL_FRAGMENT_SHADER, readFile(shaderPath("points.frag")), "points.frag"));
   updateView();
   gProj = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 400.f);
@@ -116,7 +118,7 @@ void clearSSBO(GLuint buffer, uint32_t value) {
 }
 GLuint ceilDiv(GLuint n, GLuint d) { return d == 0 ? 0 : (n + d - 1) / d; }
 GLuint loadComputeProgram(const char* path) {
-  return link(compile(GL_COMPUTE_SHADER, readFile(shaderPath(path)), path), 0);
+  return link(compile(GL_COMPUTE_SHADER, readFile(shaderPath(path)), path), 0, 0);
 }
 bool initWindow(int width, int height, const char* title) {
   gWidth = width; gHeight = height;
@@ -124,6 +126,8 @@ bool initWindow(int width, int height, const char* title) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_SAMPLES, 4);
+  glEnable(GL_MULTISAMPLE);
   gWindow = glfwCreateWindow(width, height, title, 0, 0);
   if (!gWindow) { glfwTerminate(); return false; }
   glfwMakeContextCurrent(gWindow);

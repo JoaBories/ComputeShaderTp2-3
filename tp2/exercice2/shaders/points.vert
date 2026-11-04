@@ -1,9 +1,14 @@
 #version 430 core
 layout(location = 0) in vec4 posType;
+
 uniform mat4 uView;
-uniform mat4 uProj;
+
+out VS_OUT {
+  vec3 viewPos;
+  float type;
+} vs_out;
+
 void main() {
-  vec4 view = uView * vec4(posType.xyz, 1.0);
-  gl_Position = uProj * view;
-  gl_PointSize = clamp(400.0 / max(-view.z, 1.0), 1.5, 12.0);
+  vs_out.viewPos = (uView * vec4(posType.xyz, 1.0)).xyz;
+  vs_out.type = posType.w;
 }
