@@ -111,7 +111,7 @@ void readSSBO(GLuint buffer, GLsizeiptr bytes, void* dst) {
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, dst);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
-void clearSSBO(GLuint buffer, uint32_t value) {
+void clearSSBOI(GLuint buffer, uint32_t value) {
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
   glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &value);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);

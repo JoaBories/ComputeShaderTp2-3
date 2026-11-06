@@ -26,6 +26,7 @@ GLuint ceilDiv(GLuint n, GLuint d);
 GLuint loadComputeProgram(const char* path);
 
 bool initWindow(int width, int height, const char* title);
+bool loadMap(const char* path);
 bool windowShouldClose();
 void pollAndSwap();
 void shutdownWindow();
@@ -34,6 +35,7 @@ int windowHeight();
 
 void renderGBuffer();
 void displayTexture(GLuint texture);
+void displayPreview();
 GLuint gbufferPosition();
 GLuint gbufferNormal();
 GLuint gbufferAlbedo();

@@ -45,7 +45,7 @@ local function cppProject(name, dir)
     debugdir(dir)
 end
 
-local function withGl(dir, useGlfw, useGlm)
+local function withGl(dir, useGlfw, useGlm, useAssimp)
   includedirs { vendor .. "/glew/include" }
   libdirs { vendor .. "/glew/lib" }
   links { "glew32", "opengl32" }
@@ -53,6 +53,11 @@ local function withGl(dir, useGlfw, useGlm)
     includedirs { vendor .. "/glfw/include" }
     libdirs { vendor .. "/glfw/lib" }
     links { "glfw3dll" }
+  end
+  if useAssimp then
+    includedirs { vendor .. "/assimp/include" }
+    libdirs { vendor .. "/assimp/lib" }
+    links { "assimp-vc145-mt" }
   end
   if useGlm then
     includedirs { vendor .. "/glm/src" }
@@ -69,15 +74,15 @@ local function withGl(dir, useGlfw, useGlm)
   filter {}
 end
 
-local function add(name, dir, useGlfw, useGlm)
+local function add(name, dir, useGlfw, useGlm, useAssimp)
   if not os.isdir(dir) then
     return
   end
   cppProject(name, dir)
-  withGl(dir, useGlfw, useGlm)
+  withGl(dir, useGlfw, useGlm, useAssimp)
 end
 
-add("tp2_exercice1", "tp2/exercice1", true, true)
-add("tp2_exercice2", "tp2/exercice2", true, true)
-add("tp2_exercice3", "tp2/exercice3", true, true)
-add("tp3_squelette", "tp3/squelette", true, true)
+add("tp2_exercice1", "tp2/exercice1", true, true, false)
+add("tp2_exercice2", "tp2/exercice2", true, true, false)
+add("tp2_exercice3", "tp2/exercice3", true, true, false)
+add("tp3_squelette", "tp3/squelette", true, true, true)

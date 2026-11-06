@@ -15,7 +15,7 @@ float rnd() {
 const std::vector<PointLight>& lights() { return gLights; }
 
 void updateLights(float timeSeconds) {
-  const int n = 1000;
+  const int n = 10000;
   if (static_cast<int>(gLights.size()) != n) {
     gLights.resize(static_cast<size_t>(n));
     for (int i = 0; i < n; ++i) {

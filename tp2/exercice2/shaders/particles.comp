@@ -37,7 +37,6 @@ void main() {
   ivec3 c = getCellPos(pos);
 
   vec3 force = vec3(0.0f);
-  int forceCount = 0;
   
   int xMin = max(0,   c.x - 1);
   int xMax = min(gridSize-1, c.x + 1);

@@ -18,6 +18,7 @@ inline void initGLLoader() {}
 GLuint makeSSBO(GLuint binding, GLsizeiptr bytes, const void* data = 0);
 void readSSBO(GLuint buffer, GLsizeiptr bytes, void* dst);
 void clearSSBO(GLuint buffer, uint32_t value);
+void clearSSBO(GLuint buffer, float value);
 GLuint ceilDiv(GLuint n, GLuint d);
 GLuint loadComputeProgram(const char* path);
 bool initWindow(int width, int height, const char* title);
@@ -29,3 +30,4 @@ int windowHeight();
 const glm::mat4& viewMatrix();
 const glm::mat4& projMatrix();
 void drawPoints(GLuint particleBuffer, GLsizei count);
+void drawGridImpl(const float bmin[3], const float bmax[3]);

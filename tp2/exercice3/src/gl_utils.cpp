@@ -1,6 +1,7 @@
 #include "gl_utils.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -12,6 +13,43 @@ int gHeight = 800;
 glm::mat4 gView(1.f);
 glm::mat4 gProj(1.f);
 GLuint gPoints = 0;
+const glm::vec3 gTarget(0.f, 0.f, 0.f);
+float gYaw = 0.f;
+float gPitch = 0.f;
+float gDist = 88.f;
+bool gDragging = false;
+double gLastX = 0.0;
+double gLastY = 0.0;
+
+void updateView() {
+  const float cy = std::cos(gYaw), sy = std::sin(gYaw);
+  const float cp = std::cos(gPitch), sp = std::sin(gPitch);
+  const glm::vec3 eye = gTarget + glm::vec3(gDist * cp * sy, gDist * sp, gDist * cp * cy);
+  gView = glm::lookAt(eye, gTarget, glm::vec3(0.f, 1.f, 0.f));
+}
+void onMouseButton(GLFWwindow*, int button, int action, int) {
+  if (button != GLFW_MOUSE_BUTTON_LEFT) return;
+  gDragging = action == GLFW_PRESS;
+  glfwGetCursorPos(gWindow, &gLastX, &gLastY);
+}
+void onCursor(GLFWwindow*, double x, double y) {
+  if (!gDragging) return;
+  const float dx = static_cast<float>(x - gLastX);
+  const float dy = static_cast<float>(y - gLastY);
+  gLastX = x;
+  gLastY = y;
+  gYaw -= dx * 0.005f;
+  gPitch += dy * 0.005f;
+  if (gPitch > 1.5f) gPitch = 1.5f;
+  if (gPitch < -1.5f) gPitch = -1.5f;
+  updateView();
+}
+void onScroll(GLFWwindow*, double, double yoff) {
+  gDist *= yoff > 0.0 ? 0.9f : 1.1f;
+  if (gDist < 10.f) gDist = 10.f;
+  if (gDist > 3000.f) gDist = 3000.f;
+  updateView();
+}
 std::string readFile(const std::string& path) {
   std::ifstream in(path.c_str());
   if (!in) throw std::runtime_error("lecture impossible : " + path);
@@ -26,9 +64,9 @@ GLuint compile(GLenum type, const std::string& src, const std::string& name) {
   if (!ok) { char log[2048]; glGetShaderInfoLog(shader, sizeof(log), 0, log); throw std::runtime_error(name + " : " + log); }
   return shader;
 }
-GLuint link(GLuint a, GLuint b) {
+GLuint link(GLuint a, GLuint b, GLuint c) {
   GLuint program = glCreateProgram();
-  glAttachShader(program, a); if (b) glAttachShader(program, b);
+  glAttachShader(program, a); if (b) glAttachShader(program, b); if (c) glAttachShader(program, c);
   glLinkProgram(program);
   GLint ok = 0; glGetProgramiv(program, GL_LINK_STATUS, &ok);
   if (!ok) { char log[2048]; glGetProgramInfoLog(program, sizeof(log), 0, log); throw std::runtime_error(std::string("link : ") + log); }
@@ -42,9 +80,10 @@ std::string shaderPath(const char* path) {
 void ensurePoints() {
   if (gPoints) return;
   gPoints = link(compile(GL_VERTEX_SHADER, readFile(shaderPath("points.vert")), "points.vert"),
+                 compile(GL_GEOMETRY_SHADER, readFile(shaderPath("points.geom")), "points.geom"),
                  compile(GL_FRAGMENT_SHADER, readFile(shaderPath("points.frag")), "points.frag"));
-  gView = glm::lookAt(glm::vec3(32.f, 32.f, 120.f), glm::vec3(32.f, 32.f, 32.f), glm::vec3(0.f, 1.f, 0.f));
-  gProj = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 400.f);
+  updateView();
+  gProj = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 4000.f);
 }
 }
 GLuint makeSSBO(GLuint binding, GLsizeiptr bytes, const void* data) {
@@ -64,19 +103,33 @@ void clearSSBO(GLuint buffer, uint32_t value) {
   glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &value);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
+void clearSSBO(GLuint buffer, float value) {
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+  glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, &value);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+
 GLuint ceilDiv(GLuint n, GLuint d) { return d == 0 ? 0 : (n + d - 1) / d; }
 GLuint loadComputeProgram(const char* path) {
-  return link(compile(GL_COMPUTE_SHADER, readFile(shaderPath(path)), path), 0);
+  return link(compile(GL_COMPUTE_SHADER, readFile(shaderPath(path)), path), 0, 0);
 }
 bool initWindow(int width, int height, const char* title) {
   gWidth = width; gHeight = height;
   if (!glfwInit()) return false;
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+  
+  glfwWindowHint(GLFW_SAMPLES, 4);
+  glEnable(GL_MULTISAMPLE);
+  
   gWindow = glfwCreateWindow(width, height, title, 0, 0);
   if (!gWindow) { glfwTerminate(); return false; }
   glfwMakeContextCurrent(gWindow);
+  glfwSetMouseButtonCallback(gWindow, onMouseButton);
+  glfwSetCursorPosCallback(gWindow, onCursor);
+  glfwSetScrollCallback(gWindow, onScroll);
   initGLLoader(); glfwSwapInterval(1); return true;
 }
 bool windowShouldClose() { return glfwWindowShouldClose(gWindow); }
@@ -105,3 +158,32 @@ void drawPoints(GLuint particleBuffer, GLsizei count) {
   glDrawArrays(GL_POINTS, 0, count);
   glDeleteVertexArrays(1, &vao);
 }
+
+void drawGridImpl(const float bmin[3], const float bmax[3]) {
+  ensurePoints();
+  ensurePoints();
+  glUseProgram(0);
+  glBindVertexArray(0);
+  glMatrixMode(GL_PROJECTION);
+  glLoadMatrixf(&gProj[0][0]);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadMatrixf(&gView[0][0]);
+  glColor3f(0.35f, 0.45f, 0.55f);
+  const float x0 = bmin[0], y0 = bmin[1], z0 = bmin[2];
+  const float x1 = bmax[0], y1 = bmax[1], z1 = bmax[2];
+  glBegin(GL_LINES);
+  glVertex3f(x0, y0, z0); glVertex3f(x1, y0, z0);
+  glVertex3f(x0, y1, z0); glVertex3f(x1, y1, z0);
+  glVertex3f(x0, y0, z1); glVertex3f(x1, y0, z1);
+  glVertex3f(x0, y1, z1); glVertex3f(x1, y1, z1);
+  glVertex3f(x0, y0, z0); glVertex3f(x0, y1, z0);
+  glVertex3f(x1, y0, z0); glVertex3f(x1, y1, z0);
+  glVertex3f(x0, y0, z1); glVertex3f(x0, y1, z1);
+  glVertex3f(x1, y0, z1); glVertex3f(x1, y1, z1);
+  glVertex3f(x0, y0, z0); glVertex3f(x0, y0, z1);
+  glVertex3f(x1, y0, z0); glVertex3f(x1, y0, z1);
+  glVertex3f(x0, y1, z0); glVertex3f(x0, y1, z1);
+  glVertex3f(x1, y1, z0); glVertex3f(x1, y1, z1);
+  glEnd();
+}
+

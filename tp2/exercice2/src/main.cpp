@@ -17,7 +17,6 @@ int main() {
   GLuint next = makeSSBO(1, static_cast<GLsizeiptr>(state.size() * sizeof(Particle)), 0);
   GLuint CellHeads = makeSSBO(4, static_cast<GLsizeiptr>(nC * sizeof(int)), nullptr);
   GLuint ChainedLists = makeSSBO(5, static_cast<GLsizeiptr>(N * sizeof(int)), nullptr);
-  GLuint Forces = makeSSBO(6, static_cast<GLsizeiptr>(N * sizeof(float) * 4), nullptr);
   
   GLuint build = loadComputeProgram("build_lists.comp");
   GLuint prog = loadComputeProgram("particles.comp");
@@ -30,7 +29,7 @@ int main() {
     dt = time - lastTime;
     lastTime = time;
     
-    clearSSBO(CellHeads, -1);
+    clearSSBOI(CellHeads, -1);
     
     glUseProgram(build);
     glUniform1ui(glGetUniformLocation(build, "N"), static_cast<GLuint>(N));

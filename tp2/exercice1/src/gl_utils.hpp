@@ -17,7 +17,7 @@ inline void initGLLoader() {}
 #include <cstdint>
 GLuint makeSSBO(GLuint binding, GLsizeiptr bytes, const void* data = 0);
 void readSSBO(GLuint buffer, GLsizeiptr bytes, void* dst);
-void clearSSBO(GLuint buffer, uint32_t value);
+void clearSSBOI(GLuint buffer, uint32_t value);
 GLuint ceilDiv(GLuint n, GLuint d);
 GLuint loadComputeProgram(const char* path);
 bool initWindow(int width, int height, const char* title);

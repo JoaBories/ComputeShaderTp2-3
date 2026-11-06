@@ -41,7 +41,7 @@ int main() {
     dt = time - lastTime;
     lastTime = time;
     
-    clearSSBO(CellHeads, -1);
+    clearSSBOI(CellHeads, -1);
     
     glUseProgram(build);
     glUniform1ui(glGetUniformLocation(build, "N"), static_cast<GLuint>(N));
