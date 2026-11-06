@@ -15,12 +15,14 @@ end
 local vendor = vendorRoot()
 local glewDll = vendor .. "/glew/lib/glew32.dll"
 local glfwDll = vendor .. "/glfw/lib/glfw3.dll"
+local assimpDll = vendor .. "/assimp/lib/assimp-vc145-mt.dll"
+local lzmaDll = vendor .. "/lzma/lib/lzma.dll"
 
 workspace "tps"
   architecture "x64"
   configurations { "Debug", "Release" }
   location "vs2022"
-  cppdialect "C++11"
+  cppdialect "C++20"
   multiprocessorcompile "On"
 
   filter "configurations:Debug"
@@ -46,9 +48,22 @@ local function cppProject(name, dir)
 end
 
 local function withGl(dir, useGlfw, useGlm, useAssimp)
-  includedirs { vendor .. "/glew/include" }
-  libdirs { vendor .. "/glew/lib" }
-  links { "glew32", "opengl32" }
+  includedirs { 
+    vendor .. "/glew/include",
+    vendor .. "/zlib",
+    vendor .. "/lzma/include",
+    vendor .. "/jpegturbo/include"
+  }
+  libdirs { 
+    vendor .. "/glew/lib",
+    vendor .. "/zlib",
+    vendor .. "/lzma/lib",
+    vendor .. "/jpegturbo/lib"
+  }
+  links { 
+    "glew32", "opengl32",
+    "zlib", "lzma", "jpeg-static", "turbojpeg-static"
+  }
   if useGlfw then
     includedirs { vendor .. "/glfw/include" }
     libdirs { vendor .. "/glfw/lib" }
@@ -67,6 +82,8 @@ local function withGl(dir, useGlfw, useGlm, useAssimp)
   }
   filter "system:windows"
     local cmds = { '{COPYFILE} "' .. glewDll .. '" "%{cfg.targetdir}"' }
+    table.insert(cmds, '{COPYFILE} "' .. assimpDll .. '" "%{cfg.targetdir}"')
+    table.insert(cmds, '{COPYFILE} "' .. lzmaDll .. '" "%{cfg.targetdir}"')
     if useGlfw then
       table.insert(cmds, '{COPYFILE} "' .. glfwDll .. '" "%{cfg.targetdir}"')
     end
