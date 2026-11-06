@@ -94,7 +94,7 @@ void ensurePoints() {
                  compile(GL_GEOMETRY_SHADER, readFile(shaderPath("points.geom")), "points.geom"),
                  compile(GL_FRAGMENT_SHADER, readFile(shaderPath("points.frag")), "points.frag"));
   updateView();
-  gProj = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 400.f);
+  gProj = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 4000.f);
 }
 }
 

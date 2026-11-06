@@ -9,9 +9,9 @@ void initParticles(std::vector<Particle>& dst, int n, float L) {
   dst.resize(static_cast<size_t>(n));
   for (int i = 0; i < n; ++i) {
     Particle& p = dst[static_cast<size_t>(i)];
-    p.posType[0] = rnd() * L;
-    p.posType[1] = rnd() * L;
-    p.posType[2] = rnd() * L;
+    p.posType[0] = rnd() * L * 1e-1f + L/2;
+    p.posType[1] = rnd() * L * 1e-1f + L/2;
+    p.posType[2] = rnd() * L * 1e-1f + L/2;
     p.posType[3] = (i % 2 == 0) ? 1.f : -1.f;
     p.vel[0] = (rnd() - 0.5f) * 2.f;
     p.vel[1] = (rnd() - 0.5f) * 2.f;
