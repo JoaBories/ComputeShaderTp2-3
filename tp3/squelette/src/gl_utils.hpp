@@ -41,6 +41,8 @@ GLuint gbufferNormal();
 GLuint gbufferAlbedo();
 GLuint gbufferDepth();
 
+void drawPoints(GLuint particleBuffer, GLsizei count);
+
 const glm::mat4& viewMatrix();
 const glm::mat4& projMatrix();
 float zNear();

@@ -1,0 +1,47 @@
+#version 430 core
+layout(local_size_x = 256) in;
+
+struct PointLight {
+    vec4 positionRadius; // xyz : position (repere MONDE), w : rayon
+    vec4 colorIntensity; // rgb : couleur, w : intensite
+};
+
+layout(std430, binding = 0) readonly buffer Lights {
+    PointLight lights[];
+};
+
+layout(std430, binding = 1) buffer Vis {
+    uint visibleCount; // compte les lumieres retenues
+    uint visible[]; // indices des lumieres retenues
+};
+
+uniform uint numLights;
+uniform vec4 planes[6]; // n.xyz, c : plans du frustum
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= numLights) return;
+    
+    vec3 pos = lights[id].positionRadius.xyz;
+    float r = lights[id].positionRadius.w;
+    
+    float p1 = dot(planes[0].xyz, pos) + planes[0].w;
+    float p2 = dot(planes[1].xyz, pos) + planes[1].w;
+    float p3 = dot(planes[2].xyz, pos) + planes[2].w;
+    float p4 = dot(planes[3].xyz, pos) + planes[3].w;
+    float p5 = dot(planes[4].xyz, pos) + planes[4].w;
+    float p6 = dot(planes[5].xyz, pos) + planes[5].w;
+    
+    bool vis = p1 >= -r;
+    vis = vis || (p2 >= -r);
+    vis = vis || (p3 >= -r);
+    vis = vis || (p4 >= -r);
+    vis = vis || (p5 >= -r);
+    vis = vis || (p6 >= -r);
+    
+    if (vis)
+    {
+        visibleCount = atomicAdd(visibleCount, 1);
+        visible[visibleCount-1] = id;
+    }
+}

@@ -649,6 +649,22 @@ GLuint gbufferNormal() { return gNrm; }
 GLuint gbufferAlbedo() { return gAlb; }
 GLuint gbufferDepth() { return gDepth; }
 
+void drawPoints(GLuint particleBuffer, GLsizei count) {
+  ensurePoints();
+  glViewport(0, 0, windowWidth(), windowHeight());
+  glEnable(GL_DEPTH_TEST); glEnable(GL_PROGRAM_POINT_SIZE);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glUseProgram(gPoints);
+  glUniformMatrix4fv(glGetUniformLocation(gPoints, "uView"), 1, GL_FALSE, &gView[0][0]);
+  glUniformMatrix4fv(glGetUniformLocation(gPoints, "uProj"), 1, GL_FALSE, &gProj[0][0]);
+  GLuint vao = 0; glGenVertexArrays(1, &vao); glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, particleBuffer);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+  glDrawArrays(GL_POINTS, 0, count);
+  glDeleteVertexArrays(1, &vao);
+}
+
 const glm::mat4& viewMatrix() { return gView; }
 const glm::mat4& projMatrix() { return gProj; }
 float zNear() { return kNear; }
