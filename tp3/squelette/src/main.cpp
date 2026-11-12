@@ -7,7 +7,7 @@
 #include <string>
 
 int main(int argc, char** argv) {
-  const char* map = "1smallmap.pk3";
+  const char* map = "map/1smallmap.pk3";
   
   if (!initWindow(1280, 720, "Compute shaders")) {
     return 1;

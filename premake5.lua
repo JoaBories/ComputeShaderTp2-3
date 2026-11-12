@@ -24,6 +24,7 @@ workspace "tps"
   location "vs2022"
   cppdialect "C++20"
   multiprocessorcompile "On"
+  debugdir "%{wks.location}"
 
   filter "configurations:Debug"
     runtime "Debug"
