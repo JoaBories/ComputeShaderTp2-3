@@ -33,7 +33,7 @@ void shutdownWindow();
 int windowWidth();
 int windowHeight();
 
-void renderGBuffer();
+void renderGBuffer(GLuint lightSSBO);
 void displayTexture(GLuint texture);
 void displayPreview();
 GLuint gbufferPosition();
@@ -41,7 +41,7 @@ GLuint gbufferNormal();
 GLuint gbufferAlbedo();
 GLuint gbufferDepth();
 
-void drawPoints(GLuint particleBuffer, GLsizei count);
+void drawLights(GLuint particleBuffer, GLsizei count);
 
 const glm::mat4& viewMatrix();
 const glm::mat4& projMatrix();

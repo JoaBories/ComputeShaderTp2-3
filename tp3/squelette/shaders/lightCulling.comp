@@ -32,12 +32,14 @@ void main() {
     float p5 = dot(planes[4].xyz, pos) + planes[4].w;
     float p6 = dot(planes[5].xyz, pos) + planes[5].w;
     
-    bool vis = p1 >= -r;
-    vis = vis || (p2 >= -r);
-    vis = vis || (p3 >= -r);
-    vis = vis || (p4 >= -r);
-    vis = vis || (p5 >= -r);
-    vis = vis || (p6 >= -r);
+    bool vis = false;
+    
+    if (p1 >= -r) vis = true;
+    if (p2 >= -r) vis = true;
+    if (p3 >= -r) vis = true;
+    if (p4 >= -r) vis = true;
+    if (p5 >= -r) vis = true;
+    if (p6 >= -r) vis = true;
     
     if (vis)
     {

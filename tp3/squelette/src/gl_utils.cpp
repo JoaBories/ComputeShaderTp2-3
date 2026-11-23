@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "scene.hpp"
+
 namespace {
 GLFWwindow* gWindow = 0;
 int gWidth = 1280;
@@ -45,6 +47,7 @@ bool gLook = false;
 double gLastMouseX = 0.0;
 double gLastMouseY = 0.0;
 bool gHaveMouse = false;
+GLuint gPoints = 0;
 GLuint gQuad = 0;
 struct MapPart {
   GLuint vao;
@@ -80,12 +83,11 @@ GLuint compile(GLenum type, const std::string& src, const std::string& name) {
   return shader;
 }
 
-GLuint linkProgram(GLuint a, GLuint b) {
+GLuint linkProgram(GLuint a, GLuint b, GLuint c) {
   GLuint program = glCreateProgram();
   glAttachShader(program, a);
-  if (b) {
-    glAttachShader(program, b);
-  }
+  if (b) glAttachShader(program, b);
+  if (c) glAttachShader(program, c);
   glLinkProgram(program);
   GLint ok = 0;
   glGetProgramiv(program, GL_LINK_STATUS, &ok);
@@ -95,9 +97,8 @@ GLuint linkProgram(GLuint a, GLuint b) {
     throw std::runtime_error(std::string("link : ") + log);
   }
   glDeleteShader(a);
-  if (b) {
-    glDeleteShader(b);
-  }
+  if (b) glDeleteShader(b);
+  if (c) glDeleteShader(c);
   return program;
 }
 
@@ -107,6 +108,13 @@ std::string shaderPath(const char* path) {
     return path;
   }
   return std::string(SHADER_DIR) + "/" + path;
+}
+  
+void ensurePoints() {
+if (gPoints) return;
+gPoints = linkProgram(compile(GL_VERTEX_SHADER, readFile(shaderPath("points.vert")), "points.vert"),
+               compile(GL_GEOMETRY_SHADER, readFile(shaderPath("points.geom")), "points.geom"),
+               compile(GL_FRAGMENT_SHADER, readFile(shaderPath("points.frag")), "points.frag"));
 }
 
 void makeTargets(int w, int h) {
@@ -523,7 +531,7 @@ GLuint ceilDiv(GLuint n, GLuint d) {
 
 GLuint loadComputeProgram(const char* path) {
   const std::string src = readFile(shaderPath(path));
-  return linkProgram(compile(GL_COMPUTE_SHADER, src, path), 0);
+  return linkProgram(compile(GL_COMPUTE_SHADER, src, path), 0, 0);
 }
 
 bool initWindow(int width, int height, const char* title) {
@@ -548,13 +556,16 @@ bool initWindow(int width, int height, const char* title) {
   try {
     gGbufferProg = linkProgram(
         compile(GL_VERTEX_SHADER, readFile(shaderPath("gbuffer.vert")), "gbuffer.vert"),
-        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("gbuffer.frag")), "gbuffer.frag"));
+        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("gbuffer.frag")), "gbuffer.frag"),
+        0);
     gDisplayProg = linkProgram(
         compile(GL_VERTEX_SHADER, readFile(shaderPath("fullscreen.vert")), "fullscreen.vert"),
-        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("display.frag")), "display.frag"));
+        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("display.frag")), "display.frag"),
+        0);
     gPreviewProg = linkProgram(
         compile(GL_VERTEX_SHADER, readFile(shaderPath("fullscreen.vert")), "fullscreen.vert"),
-        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("preview.frag")), "preview.frag"));
+        compile(GL_FRAGMENT_SHADER, readFile(shaderPath("preview.frag")), "preview.frag"),
+        0);
   } catch (const std::exception& e) {
     std::fprintf(stderr, "%s\n", e.what());
     return false;
@@ -590,7 +601,7 @@ void shutdownWindow() {
 int windowWidth() { return gWidth; }
 int windowHeight() { return gHeight; }
 
-void renderGBuffer() {
+void renderGBuffer(const GLuint lightSSBO) {
   updateCamera();
   glBindFramebuffer(GL_FRAMEBUFFER, gFbo);
   glViewport(0, 0, gWidth, gHeight);
@@ -610,6 +621,7 @@ void renderGBuffer() {
     glBindVertexArray(part.vao);
     glDrawArrays(GL_TRIANGLES, 0, part.count);
   }
+  drawLights(lightSSBO, (GLsizei)lights().size());
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -649,11 +661,8 @@ GLuint gbufferNormal() { return gNrm; }
 GLuint gbufferAlbedo() { return gAlb; }
 GLuint gbufferDepth() { return gDepth; }
 
-void drawPoints(GLuint particleBuffer, GLsizei count) {
+void drawLights(GLuint particleBuffer, GLsizei count) {
   ensurePoints();
-  glViewport(0, 0, windowWidth(), windowHeight());
-  glEnable(GL_DEPTH_TEST); glEnable(GL_PROGRAM_POINT_SIZE);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(gPoints);
   glUniformMatrix4fv(glGetUniformLocation(gPoints, "uView"), 1, GL_FALSE, &gView[0][0]);
   glUniformMatrix4fv(glGetUniformLocation(gPoints, "uProj"), 1, GL_FALSE, &gProj[0][0]);
@@ -661,6 +670,8 @@ void drawPoints(GLuint particleBuffer, GLsizei count) {
   glBindBuffer(GL_ARRAY_BUFFER, particleBuffer);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
   glDrawArrays(GL_POINTS, 0, count);
   glDeleteVertexArrays(1, &vao);
 }

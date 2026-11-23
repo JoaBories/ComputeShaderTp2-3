@@ -6,13 +6,13 @@
 #include <cstdio>
 #include <string>
 #include <array>
+#include <iostream>
 
-void cullLights(GLuint visSSBO, GLuint shader)
+void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
 {
   clearSSBO(visSSBO, 0xFFFFFFFF);
   
   const uint32_t num_light = (uint32_t)lights().size();
-  const GLuint light_ssbo = makeSSBO(0, (GLsizeiptr)(num_light * 8 * sizeof(float)), lights().data());
   
   std::array<glm::vec4, 6> planes;
 
@@ -50,7 +50,10 @@ void cullLights(GLuint visSSBO, GLuint shader)
   glUniform4fv(glGetUniformLocation(shader, "planes"), 6, plane);
   glDispatchCompute(ceilDiv(num_light, 256), 1, 1);
   
-  glDeleteBuffers(1, &light_ssbo);
+  int temp;
+  readSSBO(visSSBO, sizeof(int), &temp);
+  (void)temp;
+  std::cout << temp << "\n";
 }
 
 int main(int argc, char** argv) {
@@ -63,20 +66,24 @@ int main(int argc, char** argv) {
     return 1;
   }
   
-  GLuint visibility = makeSSBO(1, (lights().size()+1) * sizeof(int), nullptr);
+  GLuint visibility = makeSSBO(1, (GLsizeiptr)(lights().size()+1) * sizeof(int), nullptr);
   GLuint cullShader = loadComputeProgram("lightCulling.comp");
+
+  GLuint lightSSBO = 0;
   
   while (!windowShouldClose()) {
     updateLights(static_cast<float>(glfwGetTime()));
+    lightSSBO = makeSSBO(0, (GLsizeiptr)(lights().size() * 8 * sizeof(float)), lights().data());
+    cullLights(visibility, cullShader, lightSSBO);
     
-    cullLights(visibility, cullShader);
-    
-    renderGBuffer();
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    renderGBuffer(lightSSBO);
     displayPreview();
     pollAndSwap();
   }
   
   glDeleteBuffers(1, &visibility);
+  glDeleteBuffers(1, &lightSSBO);
   glDeleteProgram(cullShader);
   
   shutdownWindow();
