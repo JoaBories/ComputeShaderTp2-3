@@ -619,7 +619,7 @@ void renderGBuffer(const GLuint lightSSBO) {
     glActiveTexture(GL_TEXTURE0);
     if (part.textured) glBindTexture(GL_TEXTURE_2D, part.tex);
     glBindVertexArray(part.vao);
-    glDrawArrays(GL_TRIANGLES, 0, part.count);
+    //glDrawArrays(GL_TRIANGLES, 0, part.count);
   }
   drawLights(lightSSBO, (GLsizei)lights().size());
   glBindFramebuffer(GL_FRAMEBUFFER, 0);

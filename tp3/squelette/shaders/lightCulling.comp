@@ -43,7 +43,7 @@ void main() {
     
     if (vis)
     {
-        visibleCount = atomicAdd(visibleCount, 1);
-        visible[visibleCount-1] = id;
+        uint index = atomicAdd(visibleCount, 1);
+        visible[index] = id;
     }
 }

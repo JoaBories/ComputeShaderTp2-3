@@ -10,16 +10,17 @@
 
 void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
 {
-  clearSSBO(visSSBO, 0xFFFFFFFF);
+  clearSSBO(visSSBO, 0);
   
   const uint32_t num_light = (uint32_t)lights().size();
   
   std::array<glm::vec4, 6> planes;
 
-  const glm::vec4 r1 = projMatrix()[0];
-  const glm::vec4 r2 = projMatrix()[1];
-  const glm::vec4 r3 = projMatrix()[2];
-  const glm::vec4 r4 = projMatrix()[3];
+  const glm::mat4 vp = projMatrix() * viewMatrix(); 
+  const glm::vec4 r1 = vp[0];
+  const glm::vec4 r2 = vp[1];
+  const glm::vec4 r3 = vp[2];
+  const glm::vec4 r4 = vp[3];
   
   planes[0] = r4 + r1;
   planes[1] = r4 - r1;
@@ -30,7 +31,7 @@ void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
   
   for (auto& plane : planes)
   {
-    const float len = glm::length(plane);
+    const float len = glm::length(glm::vec3(plane));
     plane /= len;
   }
 
@@ -50,10 +51,10 @@ void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
   glUniform4fv(glGetUniformLocation(shader, "planes"), 6, plane);
   glDispatchCompute(ceilDiv(num_light, 256), 1, 1);
   
-  int temp;
-  readSSBO(visSSBO, sizeof(int), &temp);
-  (void)temp;
-  std::cout << temp << "\n";
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  std::vector<unsigned int> temp(1);
+  readSSBO(visSSBO, sizeof(unsigned int), temp.data());
+  std::cout << temp[0] << "\n";
 }
 
 int main(int argc, char** argv) {

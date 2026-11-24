@@ -20,6 +20,8 @@ out vec4 color;
 
 void main() {
   bool isVisible = false;
+  
+  if (visibleCount <= 0) return;
   for (int i = 0; i < visibleCount; i++)
   {
     if (visible[i] == geomIn[0].id) 
