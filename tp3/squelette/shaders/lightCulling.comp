@@ -25,21 +25,17 @@ void main() {
     vec3 pos = lights[id].positionRadius.xyz;
     float r = lights[id].positionRadius.w;
     
-    float p1 = dot(planes[0].xyz, pos) + planes[0].w;
-    float p2 = dot(planes[1].xyz, pos) + planes[1].w;
-    float p3 = dot(planes[2].xyz, pos) + planes[2].w;
-    float p4 = dot(planes[3].xyz, pos) + planes[3].w;
-    float p5 = dot(planes[4].xyz, pos) + planes[4].w;
-    float p6 = dot(planes[5].xyz, pos) + planes[5].w;
-    
-    bool vis = false;
-    
-    if (p1 >= -r) vis = true;
-    if (p2 >= -r) vis = true;
-    if (p3 >= -r) vis = true;
-    if (p4 >= -r) vis = true;
-    if (p5 >= -r) vis = true;
-    if (p6 >= -r) vis = true;
+    bool vis = true;
+    for (uint i = 0; i < 6; i++) 
+    {
+        float pi = dot(planes[i].xyz, pos) + planes[i].w;
+        if (pi < -r)
+        {
+            vis = false;
+            break;
+        }
+    }
+
     
     if (vis)
     {

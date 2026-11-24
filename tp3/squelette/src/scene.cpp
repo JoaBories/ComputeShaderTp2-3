@@ -3,19 +3,22 @@
 #include <cmath>
 #include <cstdlib>
 
-namespace {
-const float kBox = 64.f;
-std::vector<PointLight> gLights;
+namespace
+{
+  const float kBox = 64.f;
+  std::vector<PointLight> gLights;
+  const int n = 10000;
 
-float rnd() {
-  return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
-}
+  float rnd() {
+    return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+  }
 }
 
 const std::vector<PointLight>& lights() { return gLights; }
+size_t nLights() { return gLights.empty() ? n : gLights.size(); };
 
-void updateLights(float timeSeconds) {
-  const int n = 100;
+void updateLights(float timeSeconds)
+{
   if (static_cast<int>(gLights.size()) != n) {
     gLights.resize(static_cast<size_t>(n));
     for (int i = 0; i < n; ++i) {
@@ -30,6 +33,8 @@ void updateLights(float timeSeconds) {
       L.colorIntensity[3] = 1.f;
     }
   }
+  return;
+  
   for (size_t i = 0; i < gLights.size(); ++i) {
     PointLight& L = gLights[i];
     const float phase = static_cast<float>(i) * 0.17f;

@@ -2,13 +2,15 @@
 #include "scene.hpp"
 
 #include <GLFW/glfw3.h>
+#include "glm/gtc/matrix_access.hpp"
 
-#include <cstdio>
-#include <string>
 #include <array>
-#include <iostream>
+#include <glm/ext/matrix_transform.hpp>
 
-void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
+constexpr bool useSampleFrustrum = false;
+constexpr bool debugLight = false;
+
+void cullLights(GLuint visSSBO, GLuint shader)
 {
   clearSSBO(visSSBO, 0);
   
@@ -16,11 +18,26 @@ void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
   
   std::array<glm::vec4, 6> planes;
 
-  const glm::mat4 vp = projMatrix() * viewMatrix(); 
-  const glm::vec4 r1 = vp[0];
-  const glm::vec4 r2 = vp[1];
-  const glm::vec4 r3 = vp[2];
-  const glm::vec4 r4 = vp[3];
+  glm::mat4 vp;
+  
+  if constexpr (useSampleFrustrum)
+  {
+    constexpr float yaw = 0.0f;
+    constexpr float pitch = -0.15f;
+    const glm::vec3 look(std::cos(pitch) * std::sin(yaw), std::sin(pitch), -std::cos(pitch) * std::cos(yaw));
+    constexpr glm::vec3 eye(32.f, 8.f, 42.f);
+    const glm::mat4 view = glm::lookAt(eye, eye+look, glm::vec3(0.f, 1.f, 0.f));
+    vp = projMatrix() * view; 
+  }
+  else
+  {
+    vp = projMatrix() * viewMatrix();
+  }
+  
+  const glm::vec4 r1 = glm::row(vp, 0);
+  const glm::vec4 r2 = glm::row(vp, 1);
+  const glm::vec4 r3 = glm::row(vp, 2);
+  const glm::vec4 r4 = glm::row(vp, 3);
   
   planes[0] = r4 + r1;
   planes[1] = r4 - r1;
@@ -50,11 +67,6 @@ void cullLights(GLuint visSSBO, GLuint shader, GLuint lightSSBO)
   glUniform1ui(glGetUniformLocation(shader, "numLights"), num_light);
   glUniform4fv(glGetUniformLocation(shader, "planes"), 6, plane);
   glDispatchCompute(ceilDiv(num_light, 256), 1, 1);
-  
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-  std::vector<unsigned int> temp(1);
-  readSSBO(visSSBO, sizeof(unsigned int), temp.data());
-  std::cout << temp[0] << "\n";
 }
 
 int main(int argc, char** argv) {
@@ -67,18 +79,18 @@ int main(int argc, char** argv) {
     return 1;
   }
   
-  GLuint visibility = makeSSBO(1, (GLsizeiptr)(lights().size()+1) * sizeof(int), nullptr);
+  GLuint visibility = makeSSBO(1, (GLsizeiptr)(nLights() * sizeof(GLuint)), nullptr);
   GLuint cullShader = loadComputeProgram("lightCulling.comp");
 
   GLuint lightSSBO = 0;
   
   while (!windowShouldClose()) {
     updateLights(static_cast<float>(glfwGetTime()));
-    lightSSBO = makeSSBO(0, (GLsizeiptr)(lights().size() * 8 * sizeof(float)), lights().data());
-    cullLights(visibility, cullShader, lightSSBO);
+    lightSSBO = makeSSBO(0, (GLsizeiptr)(nLights() * 8 * sizeof(float)), lights().data());
+    cullLights(visibility, cullShader);
     
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    renderGBuffer(lightSSBO);
+    renderGBuffer(debugLight ? lightSSBO : 0);
     displayPreview();
     pollAndSwap();
   }

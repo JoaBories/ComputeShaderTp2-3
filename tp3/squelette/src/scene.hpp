@@ -8,4 +8,5 @@ struct PointLight {
 };
 
 const std::vector<PointLight>& lights();
+size_t nLights();
 void updateLights(float timeSeconds);

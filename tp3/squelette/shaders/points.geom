@@ -11,6 +11,7 @@ in VS_OUT {
   flat int id;
 } geomIn[];
 
+
 layout(std430, binding = 1) buffer Vis {
   uint visibleCount; // compte les lumieres retenues
   uint visible[]; // indices des lumieres retenues
@@ -31,8 +32,6 @@ void main() {
     }
   }
   
-  if (!isVisible) return;
-  
   vec3 center = geomIn[0].viewPos;
   
   const vec2 offsets[3] = {
@@ -44,7 +43,7 @@ void main() {
   for (int i = 0; i < 3; ++i) {
     vec3 pos = center + vec3(offsets[i] * 0.35, 0.0);
     gl_Position = uProj * vec4(pos, 1.0);
-    color = geomIn[0].color;
+    color = isVisible ? geomIn[0].color : vec4(1.0f,1.0f,1.0f,1.0f);
     EmitVertex();
   }
   EndPrimitive();
