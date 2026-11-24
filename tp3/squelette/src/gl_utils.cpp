@@ -57,7 +57,7 @@ struct MapPart {
   int textured;
 };
 std::vector<MapPart> gParts;
-
+  
 std::string readFile(const std::string& path) {
   std::ifstream in(path.c_str());
   if (!in) {
@@ -492,6 +492,9 @@ void updateCamera() {
   gProj = glm::perspective(glm::radians(70.f), float(gWidth) / float(gHeight), kNear, kFar);
 }
 }
+
+float NearPane() { return kNear; }
+float FarPane() { return kFar; }
 
 bool loadMap(const char* path) {
   try {

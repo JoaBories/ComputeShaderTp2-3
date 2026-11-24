@@ -50,3 +50,6 @@ float zFar();
 
 // Profondeur positive d = -z (repere camera) a partir du z fenetre [0, 1].
 float positiveDepthFromWindowZ(float windowZ);
+
+float NearPane();
+float FarPane();

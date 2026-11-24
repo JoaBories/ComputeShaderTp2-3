@@ -10,6 +10,10 @@
 constexpr bool useSampleFrustrum = false;
 constexpr bool debugLight = false;
 
+constexpr size_t Nx = 10;
+constexpr size_t Ny = 10;
+constexpr size_t Nz = 10;
+
 void cullLights(GLuint visSSBO, GLuint shader)
 {
   clearSSBO(visSSBO, 0);
@@ -69,6 +73,18 @@ void cullLights(GLuint visSSBO, GLuint shader)
   glDispatchCompute(ceilDiv(num_light, 256), 1, 1);
 }
 
+void clustering(GLuint clusterSSBO, GLuint shader)
+{
+  clearSSBO(clusterSSBO, 0);
+  
+  glUseProgram(shader);
+  glUniform3ui(glGetUniformLocation(shader, "N"), Nx, Ny, Nz);
+  glUniform2f(glGetUniformLocation(shader, "S"), (GLfloat)windowWidth(), (GLfloat)windowHeight());
+  glUniform2f(glGetUniformLocation(shader, "Z"), NearPane(), FarPane());
+  
+  glDispatchCompute(Nx, Ny, Nz);
+}
+
 int main(int argc, char** argv) {
   const char* map = "map/1smallmap.pk3";
   
@@ -78,16 +94,19 @@ int main(int argc, char** argv) {
   if (!loadMap(map)) {
     return 1;
   }
-  
-  GLuint visibility = makeSSBO(1, (GLsizeiptr)(nLights() * sizeof(GLuint)), nullptr);
-  GLuint cullShader = loadComputeProgram("lightCulling.comp");
+
+  const GLuint cullShader = loadComputeProgram("lightCulling.comp");
+  const GLuint clusterShader = loadComputeProgram("clustering.comp");
 
   GLuint lightSSBO = 0;
+  GLuint visibility = makeSSBO(1, (GLsizeiptr)(nLights() * sizeof(GLuint)), nullptr);
+  GLuint clusterSSBO = makeSSBO(2, Nx*Ny*Nz* 8 * sizeof(GLfloat), nullptr);
   
   while (!windowShouldClose()) {
     updateLights(static_cast<float>(glfwGetTime()));
     lightSSBO = makeSSBO(0, (GLsizeiptr)(nLights() * 8 * sizeof(float)), lights().data());
     cullLights(visibility, cullShader);
+    clustering(clusterSSBO, clusterShader);
     
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     renderGBuffer(debugLight ? lightSSBO : 0);
@@ -97,7 +116,9 @@ int main(int argc, char** argv) {
   
   glDeleteBuffers(1, &visibility);
   glDeleteBuffers(1, &lightSSBO);
+  glDeleteBuffers(1, &clusterSSBO);
   glDeleteProgram(cullShader);
+  glDeleteProgram(clusterShader);
   
   shutdownWindow();
   return 0;
