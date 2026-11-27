@@ -81,8 +81,11 @@ void clustering(GLuint clusterSSBO, GLuint shader)
   glUniform3ui(glGetUniformLocation(shader, "N"), Nx, Ny, Nz);
   glUniform2f(glGetUniformLocation(shader, "S"), (GLfloat)windowWidth(), (GLfloat)windowHeight());
   glUniform2f(glGetUniformLocation(shader, "Z"), NearPane(), FarPane());
+
+  const int ttCluster = Nx * Ny * Nz;
   
-  glDispatchCompute(Nx, Ny, Nz);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glDispatchCompute(ceilDiv(ttCluster, 256), 1, 1);
 }
 
 int main(int argc, char** argv) {
